@@ -27,7 +27,9 @@ const SIZE_MAX = 128;
 const SIZE_DEFAULT = 80;
 
 const HALO_DEFAULT = 0;
-const HALO_MAX = 0.4;
+const HALO_MAX = 10;
+const HALO_BLUR_DEFAULT = 0;
+const HALO_BLUR_MAX = 10;
 
 export function SpritePreviewDialog({
   name,
@@ -44,6 +46,7 @@ export function SpritePreviewDialog({
   const [iconColor, setIconColor] = useState('#1a1a2e');
   const [haloColor, setHaloColor] = useState('#ffffff');
   const [haloWidth, setHaloWidth] = useState(HALO_DEFAULT);
+  const [haloBlur, setHaloBlur] = useState(HALO_BLUR_DEFAULT);
 
   return (
     <Dialog onOpenChange={(v) => !v && onCloseAction()} open={true}>
@@ -100,7 +103,7 @@ export function SpritePreviewDialog({
 
               <div className="flex shrink-0 items-center gap-2 min-w-[160px]">
                 <span className="text-sm font-medium text-muted-foreground select-none whitespace-nowrap">
-                  Size: {displaySize}px
+                  {sdfMode ? `Scale: ${(displaySize / 80).toFixed(1)}×` : `Size: ${displaySize}px`}
                 </span>
                 <input
                   aria-label="Sprite display size"
@@ -159,9 +162,9 @@ export function SpritePreviewDialog({
                   />
                 </div>
 
-                <div className="flex items-center gap-2 min-w-[160px]">
+                <div className="flex items-center gap-2 min-w-[150px]">
                   <span className="text-sm font-medium text-muted-foreground select-none whitespace-nowrap">
-                    Halo: {Math.round(haloWidth * 100)}%
+                    Halo: {haloWidth}px
                   </span>
                   <input
                     aria-label="Halo width"
@@ -170,9 +173,26 @@ export function SpritePreviewDialog({
                     max={HALO_MAX}
                     min={0}
                     onChange={(e) => setHaloWidth(Number(e.target.value))}
-                    step={0.01}
+                    step={0.5}
                     type="range"
                     value={haloWidth}
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 min-w-[150px]">
+                  <span className="text-sm font-medium text-muted-foreground select-none whitespace-nowrap">
+                    Blur: {haloBlur}px
+                  </span>
+                  <input
+                    aria-label="Halo blur"
+                    className="w-24 accent-purple-600 cursor-pointer"
+                    disabled={!sdfMode}
+                    max={HALO_BLUR_MAX}
+                    min={0}
+                    onChange={(e) => setHaloBlur(Number(e.target.value))}
+                    step={0.5}
+                    type="range"
+                    value={haloBlur}
                   />
                 </div>
               </div>
@@ -189,6 +209,7 @@ export function SpritePreviewDialog({
                 <SpritePreview
                   className="w-full grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4"
                   displaySize={displaySize}
+                  haloBlur={haloBlur}
                   haloColor={haloColor}
                   haloWidth={haloWidth}
                   iconColor={iconColor}

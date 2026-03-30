@@ -3,23 +3,13 @@ import { useEffect, useRef } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import type { SpriteMeta } from './SpriteCache';
-import { renderSdf } from './sdfRenderer';
 
 type SpriteCanvasProps = {
   meta?: SpriteMeta;
   image?: HTMLImageElement;
   label: string;
   previewMode?: boolean;
-  /** When true, renders using SDF pixel manipulation instead of drawImage */
-  sdfMode?: boolean;
-  /** Display size in px (width & height CSS). Falls back to previewMode/full-size defaults. */
   displaySize?: number;
-  /** Icon fill color for SDF mode */
-  iconColor?: string;
-  /** Halo color for SDF mode */
-  haloColor?: string;
-  /** Halo width [0–0.5] for SDF mode */
-  haloWidth?: number;
 };
 
 const SpriteCanvas = ({
@@ -27,11 +17,7 @@ const SpriteCanvas = ({
   image,
   label,
   previewMode = false,
-  sdfMode = false,
   displaySize,
-  iconColor = '#000000',
-  haloColor = '#ffffff',
-  haloWidth = 0,
 }: SpriteCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { copy } = useCopyToClipboard({
@@ -48,13 +34,8 @@ const SpriteCanvas = ({
     if (!ctx) return;
 
     ctx.clearRect(0, 0, meta.width, meta.height);
-
-    if (sdfMode) {
-      renderSdf(ctx, image, meta, { iconColor, haloColor, haloWidth });
-    } else {
-      ctx.drawImage(image, meta.x, meta.y, meta.width, meta.height, 0, 0, meta.width, meta.height);
-    }
-  }, [meta, image, sdfMode, iconColor, haloColor, haloWidth]);
+    ctx.drawImage(image, meta.x, meta.y, meta.width, meta.height, 0, 0, meta.width, meta.height);
+  }, [meta, image]);
 
   // Resolve the CSS display size
   const cssSize = displaySize ?? (previewMode ? 28 : 80);
