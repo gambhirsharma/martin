@@ -69,8 +69,6 @@ export const SpritePreview: React.FC<SpritePreviewProps> = ({
       setState({ status: 'loading' });
 
       try {
-        // Always load from the regular sprite endpoint; the SDF effect is
-        // generated client-side by sdfRenderer using @mapbox/tiny-sdf.
         const baseUrl = spriteUrl;
 
         // We always use @2x high-DPI assets since we display them a little larger than one would on a map

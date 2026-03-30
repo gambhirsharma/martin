@@ -1,16 +1,4 @@
-import TinySDF from '@mapbox/tiny-sdf';
 import type { SpriteMeta } from './SpriteCache';
-
-// The published @mapbox/tiny-sdf type definitions don't expose the internal
-// working arrays, but they exist at runtime (see index.js).
-interface TinySdfInternal {
-  ctx: CanvasRenderingContext2D;
-  gridOuter: Float64Array;
-  gridInner: Float64Array;
-  f: Float64Array;
-  v: Uint16Array;
-  z: Float64Array;
-}
 
 export type SdfRenderOptions = {
   /** Icon fill color, e.g. '#ffffff' or 'rgb(255,255,255)' */
@@ -27,10 +15,7 @@ export type SdfRenderOptions = {
    * Mapbox/martin convention is ~0.75.
    */
   cutoff?: number;
-  /**
-   * How many pixels around the glyph shape to encode distance into.
-   * Matches @mapbox/tiny-sdf's `radius` parameter. Default: 8.
-   */
+  /** How many pixels around the glyph shape to encode distance into. Default: 8. */
   radius?: number;
 };
 
@@ -45,10 +30,8 @@ function parseColor(color: string): [number, number, number] {
   return [d[0], d[1], d[2]];
 }
 
-// ─── Euclidean squared distance transform ────────────────────────────────────
+// Euclidean squared distance transform
 // Felzenszwalb & Huttenlocher: https://cs.brown.edu/~pff/papers/dt-final.pdf
-// Inlined from @mapbox/tiny-sdf (BSD-2-Clause) – the functions are module-
-// private there so we reproduce them here with TypeScript types.
 const INF = 1e20;
 
 function edt(
@@ -104,40 +87,13 @@ function edt1d(
   }
 }
 
-// ─── TinySDF instance cache ───────────────────────────────────────────────────
-// Keyed by "maxDim_radius" so different sprite sizes share instances only when
-// they map to the same underlying canvas size.
-const tinySdfCache = new Map<string, TinySdfInternal>();
-
-function getTinySdf(width: number, height: number, radius: number): TinySdfInternal {
-  const key = `${Math.max(width, height)}_${radius}`;
-  let instance = tinySdfCache.get(key);
-  if (!instance) {
-    instance = new TinySDF({
-      fontSize: Math.max(width, height),
-      buffer: radius,
-      radius,
-      // Internal TinySDF cutoff is 0.25 → produces edge value ≈ 0.75 after
-      // normalisation, matching the Mapbox/martin convention used in options.cutoff.
-      cutoff: 0.25,
-    }) as unknown as TinySdfInternal;
-    tinySdfCache.set(key, instance);
-  }
-  return instance;
-}
-
 /**
  * Renders a sprite onto `ctx` at (0, 0) with SDF-based color and halo effects.
  *
- * Instead of consuming a pre-generated SDF from the server's `/sdf_sprite/`
- * endpoint, this function uses @mapbox/tiny-sdf's approach to generate the SDF
- * entirely in the browser:
- *
- *  1. Draw the regular sprite sub-image onto TinySDF's offscreen canvas.
- *  2. Read the alpha channel as an inside/outside mask (same method tiny-sdf
- *     uses for font glyphs).
- *  3. Run the Euclidean distance transform (same algorithm as tiny-sdf) to
- *     produce signed-distance values.
+ * Generates the SDF entirely in the browser:
+ *  1. Draw the regular sprite sub-image onto an offscreen canvas.
+ *  2. Read the alpha channel as an inside/outside mask.
+ *  3. Run the Euclidean distance transform to produce signed-distance values.
  *  4. Map each pixel: inside → iconColor, halo band → haloColor (fading),
  *     outside → transparent.
  */
@@ -154,26 +110,27 @@ export function renderSdf(
   const [hr, hg, hb] = parseColor(haloColor);
 
   const buffer = radius;
-
-  // Reuse a cached TinySDF instance sized for this sprite.
-  // TinySDF exposes its canvas context and pre-allocated working arrays as
-  // public members, so we drive the pipeline ourselves without calling draw().
-  const tinySdf = getTinySdf(width, height, radius);
-  const sdfCtx = tinySdf.ctx;
-
-  // Draw the sprite sub-image at (buffer, buffer) to leave room for the halo.
-  sdfCtx.clearRect(0, 0, sdfCtx.canvas.width, sdfCtx.canvas.height);
-  sdfCtx.drawImage(image, x, y, width, height, buffer, buffer, width, height);
-
   const sdfW = width + 2 * buffer;
   const sdfH = height + 2 * buffer;
   const len = sdfW * sdfH;
 
+  const offscreen = document.createElement('canvas');
+  offscreen.width = sdfW;
+  offscreen.height = sdfH;
+  const sdfCtx = offscreen.getContext('2d');
+  if (!sdfCtx) return;
+
+  sdfCtx.drawImage(image, x, y, width, height, buffer, buffer, width, height);
+
   const imgData = sdfCtx.getImageData(0, 0, sdfW, sdfH);
 
-  // Build outer/inner grids from the alpha channel – same logic as tiny-sdf's
-  // draw() method, generalised from text glyphs to arbitrary sprite images.
-  const { gridOuter, gridInner, f, v, z } = tinySdf;
+  const gridOuter = new Float64Array(len);
+  const gridInner = new Float64Array(len);
+  const maxDim = Math.max(sdfW, sdfH);
+  const f = new Float64Array(maxDim);
+  const v = new Uint16Array(maxDim);
+  const z = new Float64Array(maxDim + 1);
+
   gridOuter.fill(INF, 0, len);
   gridInner.fill(0, 0, len);
 
@@ -186,7 +143,6 @@ export function renderSdf(
         gridOuter[j] = 0;
         gridInner[j] = INF;
       } else {
-        // Sub-pixel positioning for anti-aliased sprite edges.
         const d = 0.5 - a;
         gridOuter[j] = d > 0 ? d * d : 0;
         gridInner[j] = d < 0 ? d * d : 0;
@@ -194,12 +150,9 @@ export function renderSdf(
     }
   }
 
-  // Run the 2-D Euclidean distance transform on both grids using TinySDF's
-  // pre-allocated scratch arrays (f, v, z).
   edt(gridOuter, 0, 0, sdfW, sdfH, sdfW, f, v, z);
   edt(gridInner, buffer, buffer, width, height, sdfW, f, v, z);
 
-  // Colourize: map each pixel's SDF value to icon/halo/transparent.
   const outData = new ImageData(width, height);
   const haloOuter = cutoff - haloWidth;
 
@@ -207,11 +160,6 @@ export function renderSdf(
     for (let px = 0; px < width; px++) {
       const i = (py + buffer) * sdfW + (px + buffer);
       const d = Math.sqrt(gridOuter[i]) - Math.sqrt(gridInner[i]);
-
-      // Normalise to [0, 1] using the same formula as tiny-sdf's draw():
-      //   tiny-sdf writes: 255 * (1 − (d / radius + sdfCutoff))
-      // With sdfCutoff = 0.25 this places the glyph edge at dist ≈ 0.75,
-      // matching the Mapbox/martin convention used by options.cutoff.
       const dist = 1.0 - (d / radius + 0.25);
 
       const outIdx = 4 * (py * width + px);
