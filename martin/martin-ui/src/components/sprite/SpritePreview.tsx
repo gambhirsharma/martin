@@ -73,12 +73,9 @@ export const SpritePreview: React.FC<SpritePreviewProps> = ({
       setState({ status: 'loading' });
 
       try {
-        const baseUrl = spriteUrl;
-
-        // We always use @2x high-DPI assets since we display them a little larger than one would on a map
         const [index, image] = await Promise.all([
-          fetchSpriteIndex(buildMartinUrl(`${baseUrl}@2x.json`)),
-          fetchSpriteImage(buildMartinUrl(`${baseUrl}@2x.png`)),
+          fetchSpriteIndex(buildMartinUrl(`${spriteUrl}@2x.json`)),
+          fetchSpriteImage(buildMartinUrl(`${spriteUrl}@2x.png`)),
         ]);
         if (cancelled) return;
 
