@@ -8,7 +8,7 @@ import SpriteCanvas from './SpriteCanvas';
 type SpritePreviewProps = {
   /**
    * Base URL for the sprite (without .json/.png or @2x).
-   * Example: "https://example.com/sprite"
+   * Example: "/sprite/my-sprites"
    */
   spriteUrl: string;
   /**
@@ -23,6 +23,20 @@ type SpritePreviewProps = {
    * Optional className for the container.
    */
   className?: string;
+  /**
+   * When true, load from the SDF endpoint (/sdf_sprite/…) and render using SDF pixel manipulation.
+   */
+  sdfMode?: boolean;
+  /**
+   * Display size in px for each sprite icon. Falls back to previewMode/full-size defaults.
+   */
+  displaySize?: number;
+  /** Icon fill color for SDF mode */
+  iconColor?: string;
+  /** Halo color for SDF mode */
+  haloColor?: string;
+  /** Halo width [0–0.5] for SDF mode */
+  haloWidth?: number;
 };
 
 type SpriteState =
@@ -39,6 +53,11 @@ export const SpritePreview: React.FC<SpritePreviewProps> = ({
   spriteIds,
   previewMode,
   className,
+  sdfMode = false,
+  displaySize,
+  iconColor,
+  haloColor,
+  haloWidth,
 }) => {
   const PREVIEW_LIMIT = 18;
   const [state, setState] = useState<SpriteState>({ status: 'loading' });
@@ -50,10 +69,13 @@ export const SpritePreview: React.FC<SpritePreviewProps> = ({
       setState({ status: 'loading' });
 
       try {
-        // we always use @2x high-DPI assets since we display them a little larger than one would on a map
+        // Switch between the regular PNG endpoint and the SDF endpoint
+        const baseUrl = sdfMode ? spriteUrl.replace(/^\/sprite\//, '/sdf_sprite/') : spriteUrl;
+
+        // We always use @2x high-DPI assets since we display them a little larger than one would on a map
         const [index, image] = await Promise.all([
-          fetchSpriteIndex(buildMartinUrl(`${spriteUrl}@2x.json`)),
-          fetchSpriteImage(buildMartinUrl(`${spriteUrl}@2x.png`)),
+          fetchSpriteIndex(buildMartinUrl(`${baseUrl}@2x.json`)),
+          fetchSpriteImage(buildMartinUrl(`${baseUrl}@2x.png`)),
         ]);
         if (cancelled) return;
 
@@ -77,7 +99,7 @@ export const SpritePreview: React.FC<SpritePreviewProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [spriteUrl]);
+  }, [spriteUrl, sdfMode]);
 
   // --- Determine which sprites to display ---
   let ids = spriteIds;
@@ -107,14 +129,19 @@ export const SpritePreview: React.FC<SpritePreviewProps> = ({
     state.status === 'ready' ? Object.fromEntries(state.sprites) : {};
 
   return (
-    <div className={cn(`flex flex-wrap gap-3 justify-start items-start min-h-[120px]`, className)}>
+    <div className={cn('flex flex-wrap gap-3 justify-start items-start min-h-[120px]', className)}>
       {ids.map((id) => (
         <SpriteCanvas
+          displaySize={displaySize}
+          haloColor={haloColor}
+          haloWidth={haloWidth}
+          iconColor={iconColor}
           image={state.status === 'ready' ? state.image : undefined}
           key={id}
           label={id}
           meta={metaMap[id]}
           previewMode={previewMode}
+          sdfMode={sdfMode}
         />
       ))}
 

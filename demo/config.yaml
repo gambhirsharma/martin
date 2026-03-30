@@ -1,0 +1,8 @@
+sprites:
+  paths:
+    - /sprites
+
+postgres:
+  connection_string: postgres://postgres@db/db
+
+web_ui: enable-for-all

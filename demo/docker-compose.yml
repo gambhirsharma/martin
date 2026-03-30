@@ -17,8 +17,10 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
-    environment:
-      - DATABASE_URL=postgres://postgres@db/db
+    volumes:
+      - ./sprites:/sprites
+      - ./config.yaml:/config.yaml
+    command: --config /config.yaml
     depends_on:
       db:
         condition: service_healthy
@@ -27,7 +29,6 @@ services:
       retries: 10
       interval: 1s
       start_period: 1s
-      start_interval: 500ms
 
   db:
     build:
@@ -39,11 +40,10 @@ services:
       - POSTGRES_USER=postgres
       - POSTGRES_HOST_AUTH_METHOD=trust
     volumes:
-      - ./db/db:/var/lib/postgresql/data
+      - ./db/db:/var/lib/postgresql
       - ./db/initdb:/docker-entrypoint-initdb.d
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "${POSTGRES_USER}" ]
       retries: 5
       interval: 10s
-      start_interval: 500ms
       start_period: 20s
