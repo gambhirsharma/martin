@@ -1,6 +1,7 @@
 import { Download } from 'lucide-react';
 import { Suspense, useId, useState } from 'react';
 import { LoadingSpinner } from '@/components/loading/loading-spinner';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -11,6 +12,7 @@ import {
 } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import type { SpriteCollection } from '@/lib/types';
+import { cn } from '@/lib/utils';
 import { SpritePreview } from '../sprite/SpritePreview';
 
 interface SpritePreviewDialogProps {
@@ -61,34 +63,42 @@ export function SpritePreviewDialog({
             </DialogHeader>
 
             {/* Toolbar */}
-            <div className="flex flex-wrap items-center gap-4 mb-4 p-3 rounded-lg border bg-muted/40">
-              {/* SDF / PNG toggle */}
-              <div className="flex items-center gap-2">
-                <span
-                  className={`text-sm font-medium select-none transition-colors ${
-                    !sdfMode ? 'text-blue-600' : 'text-muted-foreground'
-                  }`}
-                >
-                  PNG
-                </span>
+            <div className="flex flex-nowrap items-center gap-4 mb-4 p-3 rounded-lg border bg-muted/40 overflow-x-auto">
+              <div className="flex shrink-0 items-center gap-2">
+                {!sdfMode ? (
+                  <Badge
+                    className="border-transparent bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200"
+                    variant="secondary"
+                  >
+                    PNG
+                  </Badge>
+                ) : (
+                  <span className="text-sm font-medium text-muted-foreground select-none px-2 py-0.5">
+                    PNG
+                  </span>
+                )}
                 <Switch
                   aria-label="Toggle SDF mode"
                   checked={sdfMode}
                   onCheckedChange={setSdfMode}
                 />
-                <span
-                  className={`text-sm font-medium select-none transition-colors ${
-                    sdfMode ? 'text-blue-600' : 'text-muted-foreground'
-                  }`}
-                >
-                  SDF
-                </span>
+                {sdfMode ? (
+                  <Badge
+                    className="border-transparent bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200"
+                    variant="secondary"
+                  >
+                    SDF
+                  </Badge>
+                ) : (
+                  <span className="text-sm font-medium text-muted-foreground select-none px-2 py-0.5">
+                    SDF
+                  </span>
+                )}
               </div>
 
-              <div className="h-5 w-px bg-border" />
+              <div className="h-5 w-px bg-border shrink-0" />
 
-              {/* Size slider */}
-              <div className="flex items-center gap-2 min-w-[160px]">
+              <div className="flex shrink-0 items-center gap-2 min-w-[160px]">
                 <span className="text-sm font-medium text-muted-foreground select-none whitespace-nowrap">
                   Size: {displaySize}px
                 </span>
@@ -104,68 +114,71 @@ export function SpritePreviewDialog({
                 />
               </div>
 
-              {/* SDF-only controls */}
-              {sdfMode && (
-                <>
-                  <div className="h-5 w-px bg-border" />
+              <div
+                aria-hidden={!sdfMode}
+                className={cn(
+                  'flex shrink-0 items-center gap-4',
+                  !sdfMode && 'invisible pointer-events-none select-none',
+                )}
+              >
+                <div className="h-5 w-px bg-border shrink-0" />
 
-                  {/* Icon color */}
-                  <div className="flex items-center gap-2">
-                    <label
-                      className="text-sm font-medium text-muted-foreground select-none whitespace-nowrap"
-                      htmlFor={iconColorId}
-                    >
-                      Icon
-                    </label>
-                    <input
-                      className="w-8 h-8 rounded cursor-pointer border border-border p-0.5 bg-transparent"
-                      id={iconColorId}
-                      onChange={(e) => setIconColor(e.target.value)}
-                      title="Icon color"
-                      type="color"
-                      value={iconColor}
-                    />
-                  </div>
+                <div className="flex items-center gap-2">
+                  <label
+                    className="text-sm font-medium text-muted-foreground select-none whitespace-nowrap"
+                    htmlFor={iconColorId}
+                  >
+                    Icon
+                  </label>
+                  <input
+                    className="w-8 h-8 rounded cursor-pointer border border-border p-0.5 bg-transparent"
+                    disabled={!sdfMode}
+                    id={iconColorId}
+                    onChange={(e) => setIconColor(e.target.value)}
+                    title="Icon color"
+                    type="color"
+                    value={iconColor}
+                  />
+                </div>
 
-                  {/* Halo color */}
-                  <div className="flex items-center gap-2">
-                    <label
-                      className="text-sm font-medium text-muted-foreground select-none whitespace-nowrap"
-                      htmlFor={haloColorId}
-                    >
-                      Halo
-                    </label>
-                    <input
-                      className="w-8 h-8 rounded cursor-pointer border border-border p-0.5 bg-transparent"
-                      id={haloColorId}
-                      onChange={(e) => setHaloColor(e.target.value)}
-                      title="Halo color"
-                      type="color"
-                      value={haloColor}
-                    />
-                  </div>
+                <div className="flex items-center gap-2">
+                  <label
+                    className="text-sm font-medium text-muted-foreground select-none whitespace-nowrap"
+                    htmlFor={haloColorId}
+                  >
+                    Halo
+                  </label>
+                  <input
+                    className="w-8 h-8 rounded cursor-pointer border border-border p-0.5 bg-transparent"
+                    disabled={!sdfMode}
+                    id={haloColorId}
+                    onChange={(e) => setHaloColor(e.target.value)}
+                    title="Halo color"
+                    type="color"
+                    value={haloColor}
+                  />
+                </div>
 
-                  {/* Halo width slider */}
-                  <div className="flex items-center gap-2 min-w-[160px]">
-                    <span className="text-sm font-medium text-muted-foreground select-none whitespace-nowrap">
-                      Halo: {Math.round(haloWidth * 100)}%
-                    </span>
-                    <input
-                      aria-label="Halo width"
-                      className="w-24 accent-purple-600 cursor-pointer"
-                      max={HALO_MAX}
-                      min={0}
-                      onChange={(e) => setHaloWidth(Number(e.target.value))}
-                      step={0.01}
-                      type="range"
-                      value={haloWidth}
-                    />
-                  </div>
-                </>
-              )}
+                <div className="flex items-center gap-2 min-w-[160px]">
+                  <span className="text-sm font-medium text-muted-foreground select-none whitespace-nowrap">
+                    Halo: {Math.round(haloWidth * 100)}%
+                  </span>
+                  <input
+                    aria-label="Halo width"
+                    className="w-24 accent-purple-600 cursor-pointer"
+                    disabled={!sdfMode}
+                    max={HALO_MAX}
+                    min={0}
+                    onChange={(e) => setHaloWidth(Number(e.target.value))}
+                    step={0.01}
+                    type="range"
+                    value={haloWidth}
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="bg-gray-50 rounded-lg text-gray-900">
+            <div className="bg-gray-50 rounded-lg text-gray-900 px-4 pb-5 pt-5 mt-1">
               <Suspense
                 fallback={
                   <div className="flex justify-center py-12">
