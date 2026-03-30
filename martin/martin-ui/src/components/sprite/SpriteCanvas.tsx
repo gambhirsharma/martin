@@ -3,17 +3,37 @@ import { useEffect, useRef } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import type { SpriteMeta } from './SpriteCache';
+import { renderSdf } from './sdfRenderer';
 
 type SpriteCanvasProps = {
   meta?: SpriteMeta;
   image?: HTMLImageElement;
   label: string;
   previewMode?: boolean;
+  /** When true, renders using SDF pixel manipulation instead of drawImage */
+  sdfMode?: boolean;
+  /** Display size in px (width & height CSS). Falls back to previewMode/full-size defaults. */
+  displaySize?: number;
+  /** Icon fill color for SDF mode */
+  iconColor?: string;
+  /** Halo color for SDF mode */
+  haloColor?: string;
+  /** Halo width [0–0.5] for SDF mode */
+  haloWidth?: number;
 };
 
-const SpriteCanvas = ({ meta, image, label, previewMode = false }: SpriteCanvasProps) => {
+const SpriteCanvas = ({
+  meta,
+  image,
+  label,
+  previewMode = false,
+  sdfMode = false,
+  displaySize,
+  iconColor = '#000000',
+  haloColor = '#ffffff',
+  haloWidth = 0,
+}: SpriteCanvasProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  // not using copied since on-click the tooltip closes
   const { copy } = useCopyToClipboard({
     successMessage: `Sprite ID "${label}" copied to clipboard`,
   });
@@ -26,26 +46,38 @@ const SpriteCanvas = ({ meta, image, label, previewMode = false }: SpriteCanvasP
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    // Clear
-    ctx.clearRect(0, 0, meta.width, meta.height);
-    // Draw the sprite sub-image
-    ctx.drawImage(image, meta.x, meta.y, meta.width, meta.height, 0, 0, meta.width, meta.height);
-  }, [meta, image]);
 
-  if (previewMode)
+    ctx.clearRect(0, 0, meta.width, meta.height);
+
+    if (sdfMode) {
+      renderSdf(ctx, image, meta, { iconColor, haloColor, haloWidth });
+    } else {
+      ctx.drawImage(image, meta.x, meta.y, meta.width, meta.height, 0, 0, meta.width, meta.height);
+    }
+  }, [meta, image, sdfMode, iconColor, haloColor, haloWidth]);
+
+  // Resolve the CSS display size
+  const cssSize = displaySize ?? (previewMode ? 28 : 80);
+  const sizeStyle = { width: cssSize, height: cssSize };
+
+  if (previewMode) {
     return (
-      <div className="flex flex-col items-center justify-center m-1.5 h-7 w-7">
+      <div className="flex flex-col items-center justify-center m-1.5" style={sizeStyle}>
         {!meta || !image ? (
-          <div className="w-7 h-7 animate-pulse bg-purple-200 rounded-sm flex items-center justify-center"></div>
+          <div
+            className="animate-pulse bg-purple-200 rounded-sm flex items-center justify-center"
+            style={sizeStyle}
+          />
         ) : (
           <Tooltip>
             <TooltipTrigger asChild>
               <canvas
                 aria-label={`Icon for ${label}`}
-                className="h-7 w-7 object-contain block cursor-pointer hover:opacity-75 transition-opacity"
+                className="object-contain block cursor-pointer hover:opacity-75 transition-opacity"
                 height={meta.height}
                 onClick={handleClick}
                 ref={canvasRef}
+                style={sizeStyle}
                 width={meta.width}
               />
             </TooltipTrigger>
@@ -65,26 +97,32 @@ const SpriteCanvas = ({ meta, image, label, previewMode = false }: SpriteCanvasP
         )}
       </div>
     );
+  }
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <button
-          className="flex flex-col items-center justify-center m-4 h-32 w-24"
+          className="flex flex-col items-center justify-center m-4"
           onClick={handleClick}
+          style={{ width: cssSize + 16, minHeight: cssSize + 40 }}
           type="button"
         >
           <div className="flex flex-1 items-center justify-center w-full">
             {!meta || !image ? (
-              <div className="w-24 h-24 animate-pulse bg-purple-200 rounded-sm flex items-center justify-center cursor-pointer hover:bg-purple-300 transition-colors"></div>
+              <div
+                className="animate-pulse bg-purple-200 rounded-sm flex items-center justify-center cursor-pointer hover:bg-purple-300 transition-colors"
+                style={sizeStyle}
+              />
             ) : (
-              <div className="flex items-center justify-center h-20 w-20">
+              <div className="flex items-center justify-center" style={sizeStyle}>
                 <canvas
                   aria-label={`Icon for ${label}`}
-                  className="h-20 w-20 object-contain block cursor-pointer hover:opacity-75 transition-opacity"
+                  className="object-contain block cursor-pointer hover:opacity-75 transition-opacity"
                   height={meta.height}
                   onClick={handleClick}
                   ref={canvasRef}
+                  style={sizeStyle}
                   width={meta.width}
                 />
               </div>
