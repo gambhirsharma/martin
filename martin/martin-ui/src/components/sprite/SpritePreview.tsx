@@ -9,7 +9,7 @@ import SpriteCanvas from './SpriteCanvas';
 type SpritePreviewProps = {
   /**
    * Base URL for the sprite (without .json/.png or @2x).
-   * Example: "https://example.com/sprite/"
+   * Example: "https://example.com/sprite"
    */
   spriteUrl: string;
   /**
