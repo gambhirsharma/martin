@@ -1,7 +1,6 @@
 import { Download } from 'lucide-react';
 import { Suspense, useId, useState } from 'react';
 import { LoadingSpinner } from '@/components/loading/loading-spinner';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -65,22 +64,25 @@ export function SpritePreviewDialog({
             <div className="flex flex-wrap items-center gap-4 mb-4 p-3 rounded-lg border bg-muted/40">
               {/* SDF / PNG toggle */}
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-muted-foreground select-none">PNG</span>
+                <span
+                  className={`text-sm font-medium select-none transition-colors ${
+                    !sdfMode ? 'text-blue-600' : 'text-muted-foreground'
+                  }`}
+                >
+                  PNG
+                </span>
                 <Switch
                   aria-label="Toggle SDF mode"
                   checked={sdfMode}
                   onCheckedChange={setSdfMode}
                 />
-                <Badge
-                  className={
-                    sdfMode
-                      ? 'bg-purple-100 text-purple-800'
-                      : 'bg-blue-100 text-blue-800'
-                  }
-                  variant="secondary"
+                <span
+                  className={`text-sm font-medium select-none transition-colors ${
+                    sdfMode ? 'text-blue-600' : 'text-muted-foreground'
+                  }`}
                 >
-                  {sdfMode ? 'SDF' : 'PNG'}
-                </Badge>
+                  SDF
+                </span>
               </div>
 
               <div className="h-5 w-px bg-border" />
