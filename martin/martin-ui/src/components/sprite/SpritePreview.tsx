@@ -69,8 +69,9 @@ export const SpritePreview: React.FC<SpritePreviewProps> = ({
       setState({ status: 'loading' });
 
       try {
-        // Switch between the regular PNG endpoint and the SDF endpoint
-        const baseUrl = sdfMode ? spriteUrl.replace(/^\/sprite\//, '/sdf_sprite/') : spriteUrl;
+        // Always load from the regular sprite endpoint; the SDF effect is
+        // generated client-side by sdfRenderer using @mapbox/tiny-sdf.
+        const baseUrl = spriteUrl;
 
         // We always use @2x high-DPI assets since we display them a little larger than one would on a map
         const [index, image] = await Promise.all([
@@ -99,7 +100,7 @@ export const SpritePreview: React.FC<SpritePreviewProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [spriteUrl, sdfMode]);
+  }, [spriteUrl]);
 
   // --- Determine which sprites to display ---
   let ids = spriteIds;
