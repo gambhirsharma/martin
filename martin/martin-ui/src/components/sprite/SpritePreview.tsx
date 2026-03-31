@@ -40,6 +40,8 @@ type SpritePreviewProps = {
   haloWidth?: number;
   /** Halo blur in pixels for SDF mode */
   haloBlur?: number;
+  /** Icon scale factor for SDF mode (1.0 = native size) */
+  iconSize?: number;
 };
 
 type SpriteState =
@@ -62,6 +64,7 @@ export const SpritePreview: React.FC<SpritePreviewProps> = ({
   haloColor,
   haloWidth,
   haloBlur,
+  iconSize,
 }) => {
   const PREVIEW_LIMIT = 18;
   const [state, setState] = useState<SpriteState>({ status: 'loading' });
@@ -112,12 +115,11 @@ export const SpritePreview: React.FC<SpritePreviewProps> = ({
   if (sdfMode) {
     return (
       <SdfMapPreview
-        className={className}
         haloBlur={haloBlur ?? 0}
         haloColor={haloColor ?? '#ffffff'}
         haloWidth={haloWidth ?? 0}
         iconColor={iconColor ?? '#1a1a2e'}
-        iconSize={(displaySize ?? 80) / 80}
+        iconSize={iconSize ?? 1}
         spriteIds={ids}
         spriteUrl={spriteUrl}
       />

@@ -3,7 +3,6 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { useCallback, useEffect, useRef } from 'react';
 import { buildMartinUrl } from '@/lib/api';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
-import { cn } from '@/lib/utils';
 
 type SdfMapPreviewProps = {
   spriteUrl: string;
@@ -13,7 +12,6 @@ type SdfMapPreviewProps = {
   haloWidth: number;
   haloBlur: number;
   iconSize: number;
-  className?: string;
 };
 
 const LAYER_ID = 'sdf-icons';
@@ -68,7 +66,6 @@ export function SdfMapPreview({
   haloWidth,
   haloBlur,
   iconSize,
-  className,
 }: SdfMapPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -157,6 +154,7 @@ export function SdfMapPreview({
       minZoom: INITIAL_ZOOM,
       maxZoom: INITIAL_ZOOM,
       interactive: false,
+      pixelRatio: 2,
     });
 
     map.on('load', () => {
@@ -219,7 +217,7 @@ export function SdfMapPreview({
   return (
     <div
       ref={containerRef}
-      className={cn('w-full rounded-lg border', className)}
+      className="w-full rounded-lg border"
       style={{ height: totalHeight }}
     />
   );

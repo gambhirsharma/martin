@@ -26,6 +26,10 @@ const SIZE_MIN = 16;
 const SIZE_MAX = 128;
 const SIZE_DEFAULT = 80;
 
+const SDF_SCALE_MIN = 0.5;
+const SDF_SCALE_MAX = 4;
+const SDF_SCALE_DEFAULT = 1.5;
+
 const HALO_DEFAULT = 0;
 const HALO_MAX = 10;
 const HALO_BLUR_DEFAULT = 0;
@@ -43,6 +47,7 @@ export function SpritePreviewDialog({
 
   const [sdfMode, setSdfMode] = useState(false);
   const [displaySize, setDisplaySize] = useState(SIZE_DEFAULT);
+  const [sdfScale, setSdfScale] = useState(SDF_SCALE_DEFAULT);
   const [iconColor, setIconColor] = useState('#1a1a2e');
   const [haloColor, setHaloColor] = useState('#ffffff');
   const [haloWidth, setHaloWidth] = useState(HALO_DEFAULT);
@@ -102,19 +107,39 @@ export function SpritePreviewDialog({
               <div className="h-5 w-px bg-border shrink-0" />
 
               <div className="flex shrink-0 items-center gap-2 min-w-[160px]">
-                <span className="text-sm font-medium text-muted-foreground select-none whitespace-nowrap">
-                  {sdfMode ? `Scale: ${(displaySize / 80).toFixed(1)}×` : `Size: ${displaySize}px`}
-                </span>
-                <input
-                  aria-label="Sprite display size"
-                  className="w-24 accent-purple-600 cursor-pointer"
-                  max={SIZE_MAX}
-                  min={SIZE_MIN}
-                  onChange={(e) => setDisplaySize(Number(e.target.value))}
-                  step={4}
-                  type="range"
-                  value={displaySize}
-                />
+                {sdfMode ? (
+                  <>
+                    <span className="text-sm font-medium text-muted-foreground select-none whitespace-nowrap">
+                      Scale: {sdfScale.toFixed(1)}×
+                    </span>
+                    <input
+                      aria-label="SDF icon scale"
+                      className="w-24 accent-purple-600 cursor-pointer"
+                      max={SDF_SCALE_MAX}
+                      min={SDF_SCALE_MIN}
+                      onChange={(e) => setSdfScale(Number(e.target.value))}
+                      step={0.1}
+                      type="range"
+                      value={sdfScale}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <span className="text-sm font-medium text-muted-foreground select-none whitespace-nowrap">
+                      Size: {displaySize}px
+                    </span>
+                    <input
+                      aria-label="Sprite display size"
+                      className="w-24 accent-purple-600 cursor-pointer"
+                      max={SIZE_MAX}
+                      min={SIZE_MIN}
+                      onChange={(e) => setDisplaySize(Number(e.target.value))}
+                      step={4}
+                      type="range"
+                      value={displaySize}
+                    />
+                  </>
+                )}
               </div>
 
               <div
@@ -213,6 +238,7 @@ export function SpritePreviewDialog({
                   haloColor={haloColor}
                   haloWidth={haloWidth}
                   iconColor={iconColor}
+                  iconSize={sdfScale}
                   sdfMode={sdfMode}
                   spriteIds={sprite.images}
                   spriteUrl={`/sprite/${name}`}
