@@ -27,8 +27,8 @@ const SIZE_MAX = 128;
 const SIZE_DEFAULT = 80;
 
 const SDF_SCALE_MIN = 0.5;
-const SDF_SCALE_MAX = 4;
-const SDF_SCALE_DEFAULT = 1.5;
+const SDF_SCALE_MAX = 5;
+const SDF_SCALE_DEFAULT = 3.5;
 
 const HALO_DEFAULT = 0;
 const HALO_MAX = 10;
