@@ -26,6 +26,12 @@ const SpriteCanvas = ({
 
   const handleClick = () => copy(label);
 
+  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+
+  // Resolve the CSS display size
+  const cssSize = displaySize ?? (previewMode ? 28 : 80);
+  const sizeStyle = { width: cssSize, height: cssSize };
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !meta || !image) return;
@@ -33,13 +39,25 @@ const SpriteCanvas = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.clearRect(0, 0, meta.width, meta.height);
-    ctx.drawImage(image, meta.x, meta.y, meta.width, meta.height, 0, 0, meta.width, meta.height);
-  }, [meta, image]);
+    const backingW = Math.round(cssSize * dpr);
+    const backingH = Math.round(cssSize * dpr);
+    canvas.width = backingW;
+    canvas.height = backingH;
 
-  // Resolve the CSS display size
-  const cssSize = displaySize ?? (previewMode ? 28 : 80);
-  const sizeStyle = { width: cssSize, height: cssSize };
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssSize, cssSize);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    const srcW = meta.width;
+    const srcH = meta.height;
+    const scale = Math.min(cssSize / srcW, cssSize / srcH);
+    const drawW = srcW * scale;
+    const drawH = srcH * scale;
+    const offsetX = (cssSize - drawW) / 2;
+    const offsetY = (cssSize - drawH) / 2;
+    ctx.drawImage(image, meta.x, meta.y, srcW, srcH, offsetX, offsetY, drawW, drawH);
+  }, [meta, image, dpr, cssSize]);
 
   if (previewMode) {
     return (
@@ -55,11 +73,9 @@ const SpriteCanvas = ({
               <canvas
                 aria-label={`Icon for ${label}`}
                 className="object-contain block cursor-pointer hover:opacity-75 transition-opacity"
-                height={meta.height}
                 onClick={handleClick}
                 ref={canvasRef}
                 style={sizeStyle}
-                width={meta.width}
               />
             </TooltipTrigger>
             <TooltipContent>
@@ -100,11 +116,9 @@ const SpriteCanvas = ({
                 <canvas
                   aria-label={`Icon for ${label}`}
                   className="object-contain block cursor-pointer hover:opacity-75 transition-opacity"
-                  height={meta.height}
                   onClick={handleClick}
                   ref={canvasRef}
                   style={sizeStyle}
-                  width={meta.width}
                 />
               </div>
             )}

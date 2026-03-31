@@ -118,6 +118,7 @@ export function SdfMapPreview({
 
     const map = new maplibregl.Map({
       container: containerRef.current,
+      pixelRatio: window.devicePixelRatio || 1,
       style: {
         version: 8,
         sprite: sdfSpriteUrl,
@@ -141,6 +142,7 @@ export function SdfMapPreview({
               'icon-ignore-placement': true,
               'text-field': ['get', 'label'],
               'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
+              'text-size': 12,
               'text-anchor': 'top',
               'text-offset': [0, TEXT_OFFSET_Y],
               'text-allow-overlap': true,
