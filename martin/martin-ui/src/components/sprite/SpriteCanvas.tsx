@@ -26,7 +26,7 @@ const SpriteCanvas = ({
 
   const handleClick = () => copy(label);
 
-  const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+  const dpr = window?.devicePixelRatio ?? 1;
 
   // Resolve the CSS display size
   const cssSize = displaySize ?? (previewMode ? 28 : 80);
