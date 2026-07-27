@@ -70,13 +70,13 @@ export const SpritePreview: React.FC<SpritePreviewProps> = ({
   const [state, setState] = useState<SpriteState>({ status: 'loading' });
 
   useEffect(() => {
+    if (sdfMode) return;
     let cancelled = false;
 
     async function load() {
       setState({ status: 'loading' });
 
       try {
-        // we always use @2x high-DPI assets since we display them a little larger than one would on a map
         const [index, image] = await Promise.all([
           fetchSpriteIndex(buildMartinUrl(`${spriteUrl}@2x.json`)),
           fetchSpriteImage(buildMartinUrl(`${spriteUrl}@2x.png`)),
@@ -103,7 +103,7 @@ export const SpritePreview: React.FC<SpritePreviewProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [spriteUrl]);
+  }, [spriteUrl, sdfMode]);
 
   // --- Determine which sprites to display ---
   let ids = spriteIds;

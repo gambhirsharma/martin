@@ -28,3 +28,7 @@ site/
 ####
 #### Above content must match .dockerignore ####
 ####
+
+demo/sprites/
+martin/martin-ui/public/sprites/
+tests/fixtures/sprites/

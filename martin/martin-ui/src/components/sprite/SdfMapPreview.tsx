@@ -1,6 +1,8 @@
-import maplibregl from 'maplibre-gl';
+import type { Map as MaplibreMap, MapLayerMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { useCallback, useEffect, useRef } from 'react';
+import type { MapRef } from '@vis.gl/react-maplibre';
+import { Layer, Map as MapLibreMap, Source } from '@vis.gl/react-maplibre';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { buildMartinUrl } from '@/lib/api';
 
@@ -34,7 +36,7 @@ function cellHeight(iconSize: number): number {
 }
 
 function buildGridFeatures(
-  map: maplibregl.Map,
+  map: MaplibreMap,
   spriteIds: readonly string[],
   cols: number,
   cellH: number,
@@ -59,11 +61,6 @@ function buildGridFeatures(
   });
 }
 
-function queryIconAtPoint(map: maplibregl.Map, point: [number, number]): string | undefined {
-  const features = map.queryRenderedFeatures(point, { layers: [LAYER_ID] });
-  return features[0]?.properties?.icon as string | undefined;
-}
-
 export function SdfMapPreview({
   spriteUrl,
   spriteIds,
@@ -73,143 +70,112 @@ export function SdfMapPreview({
   haloBlur,
   iconSize,
 }: SdfMapPreviewProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
-  const { copy } = useCopyToClipboard({
-    successMessage: 'Sprite ID copied to clipboard',
-  });
-  const copyRef = useRef(copy);
-  copyRef.current = copy;
+  const mapRef = useRef<MapRef>(null);
+  const [gridData, setGridData] = useState<GeoJSON.FeatureCollection>(EMPTY_FC);
+  const [cursor, setCursor] = useState('');
+  const { copy } = useCopyToClipboard({ successMessage: 'Sprite ID copied to clipboard' });
 
   const cols = Math.min(spriteIds.length, MAX_COLS);
   const rows = Math.ceil(spriteIds.length / Math.max(cols, 1));
   const cellH = cellHeight(iconSize);
-
-  const styleRef = useRef({ haloBlur, haloColor, haloWidth, iconColor, iconSize });
-  styleRef.current = { haloBlur, haloColor, haloWidth, iconColor, iconSize };
-
-  const handleClick = useCallback((e: MouseEvent) => {
-    const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
-
-    const rect = map.getCanvas().getBoundingClientRect();
-    const point: [number, number] = [e.clientX - rect.left, e.clientY - rect.top];
-    const name = queryIconAtPoint(map, point);
-    if (name) copyRef.current(name);
-  }, []);
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    const map = mapRef.current;
-    const container = containerRef.current;
-    if (!map || !map.isStyleLoaded() || !container) return;
-
-    const rect = map.getCanvas().getBoundingClientRect();
-    const point: [number, number] = [e.clientX - rect.left, e.clientY - rect.top];
-    const name = queryIconAtPoint(map, point);
-    container.style.cursor = name ? 'pointer' : '';
-  }, []);
-
-  useEffect(() => {
-    if (!containerRef.current || spriteIds.length === 0) return;
-
-    const sdfSpriteUrl = buildMartinUrl(spriteUrl.replace('/sprite/', '/sdf_sprite/'));
-
-    const map = new maplibregl.Map({
-      center: [0, 0],
-      container: containerRef.current,
-      interactive: false,
-      style: {
-        layers: [
-          {
-            id: 'background',
-            paint: { 'background-color': '#f9fafb' },
-            type: 'background',
-          },
-          {
-            id: LAYER_ID,
-            layout: {
-              'icon-allow-overlap': true,
-              'icon-ignore-placement': true,
-              'icon-image': ['get', 'icon'],
-              'icon-size': styleRef.current.iconSize,
-              'text-allow-overlap': true,
-              'text-anchor': 'top',
-              'text-field': ['get', 'label'],
-              'text-font': ['Arial Regular', 'Helvetica Regular'],
-              'text-ignore-placement': true,
-              'text-max-width': 8,
-              'text-offset': [0, TEXT_OFFSET_Y],
-              'text-size': 13,
-            },
-            paint: {
-              'icon-color': styleRef.current.iconColor,
-              'icon-halo-blur': styleRef.current.haloBlur,
-              'icon-halo-color': styleRef.current.haloColor,
-              'icon-halo-width': styleRef.current.haloWidth,
-              'text-color': '#6b7280',
-              'text-halo-color': '#f9fafb',
-              'text-halo-width': 1,
-            },
-            source: SOURCE_ID,
-            type: 'symbol',
-          },
-        ],
-        sources: {
-          [SOURCE_ID]: { data: EMPTY_FC, type: 'geojson' },
-        },
-        sprite: sdfSpriteUrl,
-        version: 8,
-      },
-      zoom: INITIAL_ZOOM,
-    });
-
-    map.once('load', () => {
-      const features = buildGridFeatures(map, spriteIds, cols, cellH);
-      const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource;
-      source.setData({ features, type: 'FeatureCollection' });
-    });
-
-    const canvas = map.getCanvas();
-    canvas.addEventListener('click', handleClick);
-    canvas.addEventListener('mousemove', handleMouseMove);
-
-    mapRef.current = map;
-
-    return () => {
-      canvas.removeEventListener('click', handleClick);
-      canvas.removeEventListener('mousemove', handleMouseMove);
-      map.remove();
-      mapRef.current = null;
-    };
-  }, [spriteUrl, spriteIds, cols, cellH, handleClick, handleMouseMove]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    const update = () => {
-      if (!map.getLayer(LAYER_ID)) return;
-      map.setLayoutProperty(LAYER_ID, 'icon-size', iconSize);
-      map.setPaintProperty(LAYER_ID, 'icon-color', iconColor);
-      map.setPaintProperty(LAYER_ID, 'icon-halo-color', haloColor);
-      map.setPaintProperty(LAYER_ID, 'icon-halo-width', haloWidth);
-      map.setPaintProperty(LAYER_ID, 'icon-halo-blur', haloBlur);
-    };
-
-    if (map.isStyleLoaded()) {
-      update();
-    } else {
-      map.once('style.load', update);
-    }
-
-    return () => {
-      map.off('style.load', update);
-    };
-  }, [iconColor, iconSize, haloColor, haloWidth, haloBlur]);
-
   const totalHeight = rows * cellH;
 
+  const sdfSpriteUrl = buildMartinUrl(spriteUrl.replace('/sprite/', '/sdf_sprite/'));
+
+  const rebuildGrid = useCallback(() => {
+    const map = mapRef.current?.getMap();
+    if (!map || spriteIds.length === 0) return;
+    const features = buildGridFeatures(map, spriteIds, cols, cellH);
+    setGridData({ features, type: 'FeatureCollection' });
+  }, [spriteIds, cols, cellH]);
+
+  useEffect(() => {
+    rebuildGrid();
+  }, [rebuildGrid]);
+
+  const handleClick = useCallback(
+    (e: MapLayerMouseEvent) => {
+      const name = e.features?.[0]?.properties?.icon as string | undefined;
+      if (name) copy(name);
+    },
+    [copy],
+  );
+
+  const handleMouseEnter = useCallback(() => setCursor('pointer'), []);
+  const handleMouseLeave = useCallback(() => setCursor(''), []);
+
+  const mapStyle = useMemo(
+    () => ({
+      glyphs: buildMartinUrl('/font/{fontstack}/{range}'),
+      layers: [
+        {
+          id: 'background',
+          paint: { 'background-color': '#f9fafb' },
+          type: 'background' as const,
+        },
+      ],
+      sources: {},
+      sprite: sdfSpriteUrl,
+      version: 8 as const,
+    }),
+    [sdfSpriteUrl],
+  );
+
+  if (spriteIds.length === 0) return null;
+
   return (
-    <div className="w-full rounded-lg border" ref={containerRef} style={{ height: totalHeight }} />
+    <div className="w-full rounded-lg border overflow-hidden" style={{ height: totalHeight }}>
+    <MapLibreMap
+      boxZoom={false}
+      cursor={cursor}
+      doubleClickZoom={false}
+      dragPan={false}
+      dragRotate={false}
+      initialViewState={{ latitude: 0, longitude: 0, zoom: INITIAL_ZOOM }}
+      interactiveLayerIds={[LAYER_ID]}
+      key={sdfSpriteUrl}
+      keyboard={false}
+      mapStyle={mapStyle}
+      onClick={handleClick}
+      onLoad={rebuildGrid}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      ref={mapRef}
+      scrollZoom={false}
+      style={{ height: '100%', width: '100%' }}
+      touchPitch={false}
+      touchZoomRotate={false}
+    >
+      <Source data={gridData} id={SOURCE_ID} type="geojson">
+        <Layer
+          id={LAYER_ID}
+          layout={{
+            'icon-allow-overlap': true,
+            'icon-ignore-placement': true,
+            'icon-image': ['get', 'icon'],
+            'icon-size': iconSize,
+            'text-allow-overlap': true,
+            'text-anchor': 'top',
+            'text-field': ['get', 'label'],
+            'text-font': ['Arial Regular', 'Helvetica Regular'],
+            'text-ignore-placement': true,
+            'text-max-width': 8,
+            'text-offset': [0, TEXT_OFFSET_Y],
+            'text-size': 13,
+          }}
+          paint={{
+            'icon-color': iconColor,
+            'icon-halo-blur': haloBlur,
+            'icon-halo-color': haloColor,
+            'icon-halo-width': haloWidth,
+            'text-color': '#6b7280',
+            'text-halo-color': '#f9fafb',
+            'text-halo-width': 1,
+          }}
+          type="symbol"
+        />
+      </Source>
+    </MapLibreMap>
+    </div>
   );
 }
